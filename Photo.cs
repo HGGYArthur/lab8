@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Text; // Добавляем для StringBuilder
+using System.Text; 
 
 namespace PhotoCatalogApp
 {
