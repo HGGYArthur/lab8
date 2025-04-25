@@ -104,7 +104,7 @@ namespace PhotoCatalogApp
             }
         }
 
-        // --- Конструкторы ---
+        
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="Photo"/> значениями по умолчанию.
@@ -163,7 +163,7 @@ namespace PhotoCatalogApp
             builder.AppendLine($"  Имя файла:   {FileName}");
             builder.AppendLine($"  Описание:    {Description}");
             builder.AppendLine($"  Дата съемки: {DateTaken:dd.MM.yyyy HH:mm}"); // Явный формат даты/времени
-            builder.AppendLine($"  Размер (МБ): {FileSizeMB:F2}"); // Форматирование до 2 знаков после запятой
+            builder.AppendLine($"  Размер (МБ): {FileSizeMB:F2}"); 
             builder.AppendLine($"  Рейтинг:     {Rating}/5");
             builder.Append("-----------------------------------");
             return builder.ToString();
