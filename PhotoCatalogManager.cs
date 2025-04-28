@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-
-#pragma warning disable SYSLIB0011 
+using System.Text.Json;
 
 namespace PhotoCatalogApp
 {
@@ -31,9 +28,8 @@ namespace PhotoCatalogApp
             _photos = LoadData(); // Загрузка данных при инициализации
         }
 
-
         /// <summary>
-        /// Загружает список фотографий из бинарного файла.
+        /// Загружает список фотографий из файла JSON.
         /// Если файл не найден или пуст, возвращает новый пустой список.
         /// Обрабатывает ошибки чтения файла и десериализации.
         /// </summary>
@@ -54,21 +50,10 @@ namespace PhotoCatalogApp
 
             try
             {
-                using (FileStream fs = new FileStream(_filePath, FileMode.Open, FileAccess.Read))
-                {
-                    // BinaryFormatter требует осторожного использования из-за рисков безопасности.
-                    BinaryFormatter formatter = new BinaryFormatter();
-#pragma warning disable CS8603 // Possible null reference return. - Подавление предупреждения, т.к. каст может вернуть null, но мы ожидаем List<Photo>
-                    return (List<Photo>)formatter.Deserialize(fs);
-#pragma warning restore CS8603
-                }
+                string json = File.ReadAllText(_filePath);
+                return JsonSerializer.Deserialize<List<Photo>>(json) ?? new List<Photo>();
             }
-            catch (FileNotFoundException)
-            {
-                Console.WriteLine($"Ошибка: Файл данных '{_filePath}' не найден при попытке чтения.");
-                return new List<Photo>();
-            }
-            catch (SerializationException ex)
+            catch (JsonException ex)
             {
                 Console.WriteLine($"Ошибка десериализации данных из '{_filePath}': {ex.Message}. Возможно, формат файла поврежден или несовместим. Будет создан пустой каталог.");
                 return new List<Photo>();
@@ -78,7 +63,7 @@ namespace PhotoCatalogApp
                 Console.WriteLine($"Ошибка ввода-вывода при чтении файла '{_filePath}': {ex.Message}.");
                 return new List<Photo>();
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 Console.WriteLine($"Непредвиденная ошибка при загрузке данных из '{_filePath}': {ex.Message}");
                 return new List<Photo>();
@@ -86,7 +71,7 @@ namespace PhotoCatalogApp
         }
 
         /// <summary>
-        /// Сохраняет текущее состояние каталога фотографий в бинарный файл.
+        /// Сохраняет текущее состояние каталога фотографий в файл JSON.
         /// Перезаписывает существующий файл.
         /// </summary>
         /// <returns>true, если сохранение прошло успешно; иначе false.</returns>
@@ -101,14 +86,11 @@ namespace PhotoCatalogApp
                     Directory.CreateDirectory(directory);
                 }
 
-                using (FileStream fs = new FileStream(_filePath, FileMode.Create, FileAccess.Write))
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(fs, _photos);
-                    return true;
-                }
+                string json = JsonSerializer.Serialize(_photos);
+                File.WriteAllText(_filePath, json);
+                return true;
             }
-            catch (SerializationException ex)
+            catch (JsonException ex)
             {
                 Console.WriteLine($"Ошибка сериализации данных при сохранении в '{_filePath}': {ex.Message}");
                 return false;
@@ -152,6 +134,7 @@ namespace PhotoCatalogApp
             if (indexToRemove != -1) // Если элемент найден
             {
                 _photos.RemoveAt(indexToRemove);
+
                 if (SaveData())
                 {
                     Console.WriteLine($"Фотография с ID={id} успешно удалена.");
@@ -191,6 +174,7 @@ namespace PhotoCatalogApp
             }
 
             _photos.Add(newPhoto);
+
             if (SaveData())
             {
                 Console.WriteLine($"Фотография '{newPhoto.FileName}' (ID={newPhoto.Id}) успешно добавлена.");
@@ -205,29 +189,26 @@ namespace PhotoCatalogApp
             }
         }
 
-
         /// <summary>
         /// Находит все фотографии с рейтингом не ниже указанного.
         /// </summary>
-        /// <param name="minRating">Минимальный допустимый рейтинг (включительно).</param>
-        /// <returns>Коллекция <see cref="IEnumerable{Photo}"/> фотографий, удовлетворяющих условию, отсортированная по убыванию рейтинга.</returns>
-        public IEnumerable<Photo> GetPhotosByMinRating(int minRating)
+        public List<Photo> GetPhotosByMinRating(int minRating)
         {
-            return _photos.Where(p => p.Rating >= minRating)
-                          .OrderByDescending(p => p.Rating)
-                          .ToList();
+            return (from photo in _photos
+                    where photo.Rating >= minRating
+                    orderby photo.Rating descending
+                    select photo).ToList();
         }
 
         /// <summary>
         /// Находит все фотографии, снятые после указанной даты.
         /// </summary>
-        /// <param name="date">Дата, после которой должны быть сняты фотографии.</param>
-        /// <returns>Коллекция <see cref="IEnumerable{Photo}"/> фотографий, удовлетворяющих условию, отсортированная по дате съемки.</returns>
-        public IEnumerable<Photo> GetPhotosTakenAfter(DateTime date)
+        public List<Photo> GetPhotosTakenAfter(DateTime date)
         {
-            return _photos.Where(p => p.DateTaken > date)
-                          .OrderBy(p => p.DateTaken)
-                          .ToList();
+            return (from photo in _photos
+                    where photo.DateTaken > date
+                    orderby photo.DateTaken
+                    select photo).ToList();
         }
 
         /// <summary>
@@ -242,17 +223,12 @@ namespace PhotoCatalogApp
         /// <summary>
         /// Находит фотографию с самым большим размером файла.
         /// </summary>
-        /// <returns>Объект <see cref="Photo"/> с максимальным значением <see cref="Photo.FileSizeMB"/>,
-        /// или null, если каталог пуст.</returns>
-        public Photo? GetLargestPhoto() 
+        public Photo GetLargestPhoto()
         {
-            if (!_photos.Any())
-            {
-                return null;
-            }
-            return _photos.OrderByDescending(p => p.FileSizeMB).FirstOrDefault();
+            return (from photo in _photos
+                    orderby photo.FileSizeMB descending
+                    select photo).FirstOrDefault();
         }
-
 
         /// <summary>
         /// Генерирует следующий доступный уникальный идентификатор для новой фотографии.
@@ -266,9 +242,9 @@ namespace PhotoCatalogApp
             {
                 return 1; // Начинаем с 1, если список пуст
             }
+
             // Находим максимальное значение Id среди всех фотографий и добавляем 1
             return _photos.Max(p => p.Id) + 1;
         }
     }
 }
-#pragma warning restore SYSLIB0011 // Восстанавливаем предупреждение

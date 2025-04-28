@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Text; 
+using System.Text; // Добавляем для StringBuilder
 
 namespace PhotoCatalogApp
 {
@@ -10,17 +10,31 @@ namespace PhotoCatalogApp
     [Serializable]
     public class Photo
     {
+        private int _id;
         private string _fileName = string.Empty;
         private string _description = string.Empty;
         private double _fileSizeMB;
         private int _rating;
 
         /// <summary>
-        /// Получает или задает уникальный идентификатор фотографии (ключ).
+        /// Получает или задает уникальный идентификатор фотографии.
+        /// ID должен быть положительным числом (больше 0).
+        /// Уникальность ID должна обеспечиваться вызывающим кодом (PhotoCatalogManager).
         /// </summary>
-        /// <value>Целочисленный идентификатор.</value>
-        /// <remarks>Уникальность ID должна обеспечиваться вызывающим кодом (например, PhotoCatalogManager).</remarks>
-        public int Id { get; set; } 
+        /// <value>Целочисленный идентификатор (>= 1).</value>
+        /// <exception cref="ArgumentOutOfRangeException">Выбрасывается, если присваивается значение меньше или равное 0.</exception>
+        public int Id
+        {
+            get => _id;
+            set
+            {
+                if (value <= 0) // Проверяем, что ID больше 0
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), "ID фотографии должен быть положительным числом (больше 0).");
+                }
+                _id = value;
+            }
+        }
 
         /// <summary>
         /// Получает или задает имя файла фотографии.
@@ -104,7 +118,7 @@ namespace PhotoCatalogApp
             }
         }
 
-        
+        // --- Конструкторы ---
 
         /// <summary>
         /// Инициализирует новый экземпляр класса <see cref="Photo"/> значениями по умолчанию.
@@ -163,7 +177,7 @@ namespace PhotoCatalogApp
             builder.AppendLine($"  Имя файла:   {FileName}");
             builder.AppendLine($"  Описание:    {Description}");
             builder.AppendLine($"  Дата съемки: {DateTaken:dd.MM.yyyy HH:mm}"); // Явный формат даты/времени
-            builder.AppendLine($"  Размер (МБ): {FileSizeMB:F2}"); 
+            builder.AppendLine($"  Размер (МБ): {FileSizeMB:F2}"); // Форматирование до 2 знаков после запятой
             builder.AppendLine($"  Рейтинг:     {Rating}/5");
             builder.Append("-----------------------------------");
             return builder.ToString();

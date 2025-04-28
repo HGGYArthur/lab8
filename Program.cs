@@ -16,7 +16,7 @@ namespace PhotoCatalogApp
         /// <summary>
         /// Имя файла для хранения данных каталога.
         /// </summary>
-        private const string DataFileName = "photocatalog.bin";
+        private const string DataFileName = "photocatalog.dat";
 
         /// <summary>
         /// Менеджер каталога, инкапсулирующий логику работы с данными.
